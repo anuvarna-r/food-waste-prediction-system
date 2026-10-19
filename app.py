@@ -492,9 +492,17 @@ elif page == "Predict Food Waste":
         with col1:
 
             day = st.selectbox(
-                "Select Day",
-                sorted(df["Day"].astype(str).unique())
-            )
+    "Select Day",
+    [
+        "Sunday",
+        "Monday",
+        "Tuesday",
+        "Wednesday",
+        "Thursday",
+        "Friday",
+        "Saturday"
+    ]
+)
 
             food_type = st.selectbox(
                 "Select Food Type",
