@@ -1,183 +1,545 @@
-# 🌿 Food Waste Prediction System
+# 🌿 WasteWise – Food Waste Analytics & Prediction System
 
-A machine learning project that predicts potential food waste based on food type, day, quantity prepared, and expected demand. The project includes an interactive Streamlit dashboard for exploring food-waste patterns, generating predictions, and evaluating model performance.
+### Machine Learning | Data Analytics | Sustainability | Python | Streamlit
 
-## 📌 Project Overview
+WasteWise is an end-to-end machine learning and data analytics application designed to analyze food waste patterns, estimate potential food wastage, and support data-driven food management decisions.
 
-Food waste is an important sustainability challenge. Preparing more food than necessary can lead to unnecessary waste and inefficient resource use.
+The system combines exploratory data analysis, interactive visualizations, machine learning predictions, and rule-based recommendations through a Streamlit web application.
 
-This project demonstrates how Python and machine learning can be used to estimate food waste and explore patterns in food preparation data.
+### 🚀 Live Application
 
-The dashboard provides interactive charts, data exploration tools, and a food-waste prediction interface.
+**[Launch WasteWise](https://food-waste-prediction-system.streamlit.app/)**
 
-## 🎯 Project Objectives
+### 💻 GitHub Repository
 
-* Analyze food-waste patterns across different food types and days.
-* Predict potential food waste using machine learning.
-* Visualize food-waste distribution using pie charts and bar charts.
-* Compare prepared food with wasted food.
-* Evaluate model performance using regression metrics.
-* Explore and download the dataset through an interactive dashboard.
+**[View Source Code](https://github.com/anuvarna-r/food-waste-prediction-system)**
 
-## ✨ Features
+---
 
-* 🌿 Green-and-white dashboard interface.
-* 📊 Interactive dashboard with key performance metrics.
-* 🥧 Pie chart showing food-waste distribution by food type.
-* 🍽️ Pie chart comparing food not wasted with food wasted.
-* 📈 Bar charts showing food-waste patterns.
-* 🔮 Interactive food-waste prediction form.
-* 📁 Dataset explorer with filtering options.
-* ⬇️ CSV download for filtered dataset records.
-* 🤖 Machine learning model evaluation.
-* 📉 Actual-versus-predicted visualization.
+## 📌 1. Project Overview
 
-## 🛠️ Technologies Used
+Food waste is a significant sustainability and operational challenge for restaurants, hotels, catering services, and event management businesses.
 
-* **Python** — Programming language.
-* **Pandas** — Data manipulation and analysis.
-* **NumPy** — Numerical computing.
-* **Scikit-learn** — Machine learning and model evaluation.
-* **Streamlit** — Interactive web dashboard.
-* **Plotly** — Interactive visualizations.
-* **Matplotlib** — Supporting visualizations.
+Inaccurate food preparation estimates, fluctuating guest attendance, storage conditions, and changing demand can contribute to unnecessary food wastage.
 
-## 🧠 Machine Learning Approach
+WasteWise explores how machine learning and data analytics can support better food management.
 
-This project uses a **Random Forest Regressor** to estimate food-waste quantities.
+The application enables users to:
+
+- Analyze historical food wastage patterns.
+- Identify food categories associated with higher waste.
+- Examine wastage across different event types.
+- Estimate potential food waste using machine learning.
+- Explore relationships between operational factors and wastage.
+- Generate rule-based recommendations to support food planning.
+
+The project demonstrates an end-to-end workflow from data exploration and model training to interactive application deployment.
+
+---
+
+## 🎯 2. Project Objectives
+
+1. Analyze food wastage patterns using a structured dataset.
+2. Identify relationships between food categories, event types, and wastage.
+3. Develop a regression model to predict food waste quantities.
+4. Evaluate model performance using appropriate regression metrics.
+5. Build an interactive dashboard for data exploration.
+6. Support food management decisions through descriptive insights.
+7. Deploy the application for public access.
+
+---
+
+## 📊 3. Dataset Information
+
+The upgraded application uses a structured food wastage dataset containing **1,618 records**.
+
+### Dataset Summary
+
+| Attribute | Value |
+|---|---|
+| Total Records | 1,618 |
+| Prediction Target | Wastage Food Amount |
+| Machine Learning Algorithm | Random Forest Regressor |
+| Input Features | 10 |
+| Application Framework | Streamlit |
+| Problem Type | Supervised Regression |
 
 ### Input Features
 
-* Day
-* Food type
-* Quantity prepared
-* Expected demand
+| Feature | Description |
+|---|---|
+| Type of Food | Category of food prepared |
+| Number of Guests | Number of people attending |
+| Event Type | Type of event |
+| Quantity of Food | Total food quantity prepared |
+| Storage Conditions | Food storage environment |
+| Purchase History | Historical purchasing category |
+| Seasonality | Seasonal conditions |
+| Preparation Method | Method used to prepare or serve food |
+| Geographical Location | Location category |
+| Pricing | Food pricing category |
 
 ### Target Variable
 
-* Quantity wasted
+**Wastage Food Amount**
 
-### Workflow
+The quantity of food estimated to be wasted.
 
-1. Load the food-waste dataset.
-2. Clean and prepare the data.
-3. Encode categorical features using `OneHotEncoder`.
-4. Split the data into training and testing sets.
-5. Train a Random Forest Regression model.
-6. Generate predictions on the testing set.
-7. Evaluate model performance.
-8. Display results in the Streamlit dashboard.
+### Dataset Statistics
 
-The dataset is split into 80% training data and 20% testing data.
+The dashboard displays the following descriptive statistics:
 
-## 📊 Model Evaluation
+| Metric | Value |
+|---|---:|
+| Total Records | 1,618 |
+| Total Food Quantity | 666,980 |
+| Total Food Waste | 46,321 |
+| Overall Waste Percentage | 6.9% |
 
-The model is evaluated using:
+Quantities are reported in the dataset's original units.
 
-| Metric                    | Description                                                                                                                |
-| ------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
-| Mean Absolute Error (MAE) | Measures the average absolute difference between actual and predicted food-waste quantities. Lower is generally better.    |
-| R² Score                  | Measures how well the model explains variation in the target values. A score closer to 1 generally indicates a better fit. |
+These statistics describe the dataset and should not be interpreted as universal food waste rates.
 
-The dashboard calculates these metrics when the application runs.
+---
 
-**Important:** The dataset contains synthetic sample data. Model performance on this dataset does not establish real-world predictive accuracy. Testing with representative real-world data is necessary before using the model for operational decisions.
+## ✨ 4. Application Features
 
-## 📂 Project Structure
+### 📊 Food Waste Analytics Dashboard
+
+The dashboard provides an overview of food wastage patterns through interactive visualizations.
+
+Features include:
+
+- Total dataset records.
+- Total food quantity.
+- Total recorded food waste.
+- Overall waste percentage.
+- Food waste distribution charts.
+- Food-category comparisons.
+- Event-based waste analysis.
+- Interactive Plotly visualizations.
+
+The dashboard helps users identify patterns and investigate potential operational inefficiencies.
+
+### 🔮 Food Waste Prediction
+
+The prediction module allows users to estimate potential food wastage based on operational inputs.
+
+Users can provide:
+
+- Number of guests.
+- Event type.
+- Quantity of food.
+- Purchase history.
+- Type of food.
+- Preparation method.
+- Storage conditions.
+- Pricing.
+- Seasonality.
+- Geographical location.
+
+The application processes these inputs using a trained Random Forest regression model.
+
+#### Prediction Output
+
+The system displays:
+
+- Predicted food waste quantity.
+- Predicted food waste percentage.
+- A notice explaining that predictions are estimates.
+
+The predicted waste percentage is calculated relative to the entered food quantity.
+
+Predictions are based on patterns learned from the training dataset and are not guaranteed outcomes.
+
+### 📁 Explore Dataset
+
+The dataset exploration module allows users to:
+
+- View dataset records.
+- Filter records by food type.
+- Filter records by event type.
+- Inspect operational attributes.
+- Review the number of filtered records.
+- Explore the dataset interactively.
+
+### 🎯 Machine Learning Model Performance
+
+The model performance module presents previously recorded evaluation results.
+
+It includes:
+
+- Testing Mean Absolute Error.
+- Testing R² score.
+- Five-fold cross-validation R² score.
+- Model information.
+- Prediction target.
+- Input feature details.
+- Preprocessing and evaluation methodology.
+
+### 💡 Smart Food Waste Recommendations
+
+The recommendation module provides descriptive insights based on dataset patterns.
+
+Features include:
+
+- Identification of food categories contributing substantial waste.
+- Identification of event categories associated with high waste.
+- Food preparation planning recommendations.
+- Guest-count-based planning suggestions.
+- Storage and preparation monitoring recommendations.
+- Operational waste reduction suggestions.
+
+**Note:** These recommendations are rule-based and descriptive. They are not generated by a large language model or autonomous AI agent.
+
+---
+
+## 🛠️ 5. Technology Stack
+
+| Technology | Purpose |
+|---|---|
+| Python | Application development and machine learning |
+| Pandas | Data manipulation and analysis |
+| NumPy | Numerical operations |
+| Scikit-learn | Machine learning and model evaluation |
+| Random Forest Regressor | Food waste prediction |
+| Streamlit | Interactive web application |
+| Plotly | Interactive data visualization |
+| Matplotlib | Supporting visualizations |
+| Git | Version control |
+| GitHub | Source code hosting |
+| Streamlit Community Cloud | Application deployment |
+
+---
+
+## 🧠 6. Machine Learning Methodology
+
+### Problem Definition
+
+Food waste prediction is formulated as a supervised regression problem.
+
+The objective is to estimate the amount of food wasted based on food preparation, event, and operational characteristics.
+
+### Algorithm
+
+**Random Forest Regressor**
+
+Random Forest is an ensemble learning algorithm that combines predictions from multiple decision trees.
+
+It can model nonlinear relationships and interactions between input features.
+
+### Data Preprocessing
+
+The preprocessing workflow includes:
+
+1. Loading the dataset.
+2. Inspecting dataset structure.
+3. Checking data quality.
+4. Separating input features and target variables.
+5. Identifying categorical and numerical features.
+6. Applying one-hot encoding to categorical variables.
+7. Preparing the transformed features for model training.
+
+### Model Training
+
+The training workflow includes:
+
+1. Loading the prepared dataset.
+2. Selecting the input features.
+3. Defining the target variable.
+4. Splitting data into training and testing subsets.
+5. Training the Random Forest regression model.
+6. Generating predictions.
+7. Evaluating predictive performance.
+8. Saving the trained model for application use.
+
+### Model Evaluation
+
+The model was evaluated using regression metrics and five-fold cross-validation.
+
+The saved model is used by the Streamlit application to generate predictions.
+
+---
+
+## 📈 7. Model Evaluation Results
+
+The following metrics were recorded during the previous model training and evaluation process.
+
+| Evaluation Metric | Recorded Result |
+|---|---:|
+| Testing Mean Absolute Error (MAE) | 1.87 |
+| Testing R² Score | 0.9156 |
+| Five-Fold Cross-Validation R² | 0.8995 |
+
+### Mean Absolute Error
+
+MAE measures the average absolute difference between predicted and actual food waste quantities.
+
+A lower MAE indicates smaller average prediction errors.
+
+### R² Score
+
+R² measures how much variation in the target variable is explained by the model.
+
+The recorded testing R² of 0.9156 indicates that the model explained approximately 91.56% of the variation in the held-out test data.
+
+### Cross-Validation
+
+Five-fold cross-validation provides an additional assessment of model performance across different training and validation subsets.
+
+The recorded cross-validation R² was 0.8995.
+
+### Evaluation Limitations
+
+These results were recorded during a previous training run.
+
+They are not recalculated when the Streamlit dashboard opens.
+
+Model performance should be interpreted in the context of the dataset, evaluation procedure, and data quality.
+
+Additional validation using representative operational data would be necessary before production use.
+
+---
+
+## 📂 8. Project Structure
 
 ```text
 food-waste-prediction-system/
 │
 ├── app.py
-├── generate_dataset.py
-├── food_waste_dataset.csv
-├── train_model.py
-├── food_waste_prediction.py
-├── prediction_results.png
-├── actual_vs_predicted.png
+│
+├── explore_data.py
+│
+├── train_real_data.py
+│
+├── food_wastage_data.csv
+│
+├── food_waste_real_model.pkl
+│
+├── requirements.txt
+│
 ├── README.md
-└── .gitignore
+│
+├── .gitignore
+│
+├── generate_dataset.py
+│
+├── train_model.py
+│
+├── food_waste_dataset.csv
+│
+├── food_waste_prediction.py
+│
+├── actual_vs_predicted.png
+│
+└── prediction_results.png
 ```
 
-*Some files may vary depending on the latest version of the project.*
+### Important Files
 
-## ⚙️ Installation and Setup
+**app.py**
+
+Main Streamlit application containing the dashboard, prediction interface, dataset exploration, model performance, and recommendations.
+
+**train_real_data.py**
+
+Contains the machine learning training workflow for the upgraded dataset.
+
+**explore_data.py**
+
+Supports exploratory analysis of the food wastage dataset.
+
+**food_wastage_data.csv**
+
+Dataset used in the upgraded application.
+
+**food_waste_real_model.pkl**
+
+Saved machine learning model used for predictions.
+
+**requirements.txt**
+
+Lists the Python dependencies required to run the application.
+
+### Legacy Project Files
+
+The repository also preserves files from the initial synthetic-data prototype.
+
+These files document the earlier development stage of the project.
+
+The upgraded application uses the newer dataset and saved regression model.
+
+---
+
+## ⚙️ 9. Installation and Setup
 
 ### Prerequisites
 
-* Python 3.10 or a compatible Python version
-* Git
-* Visual Studio Code (recommended)
+- Python 3.10 or a compatible version.
+- Git.
+- A Python development environment.
 
-### 1. Clone the Repository
+### Step 1: Clone the Repository
 
 ```bash
 git clone https://github.com/anuvarna-r/food-waste-prediction-system.git
 ```
 
-### 2. Navigate to the Project Folder
+### Step 2: Navigate to the Project Directory
 
 ```bash
 cd food-waste-prediction-system
 ```
 
-### 3. Install Dependencies
+### Step 3: Create a Virtual Environment
 
 ```bash
-python -m pip install pandas numpy scikit-learn streamlit plotly matplotlib
+python -m venv .venv
 ```
 
-### 4. Run the Dashboard
+Activate the environment on Windows:
+
+```bash
+.venv\Scripts\activate
+```
+
+### Step 4: Install Dependencies
+
+```bash
+python -m pip install -r requirements.txt
+```
+
+### Step 5: Run the Streamlit Application
 
 ```bash
 python -m streamlit run app.py
 ```
 
-The dashboard should open automatically in your browser.
+The application should open automatically in your default web browser.
 
-If it does not, open the local URL displayed in your terminal.
-
-## 🖥️ Using the Dashboard
-
-### Dashboard
-
-View summary metrics, food-waste distribution pie charts, and bar charts.
-
-### Predict Food Waste
-
-Choose a day and food type, then enter the quantity prepared and expected demand to generate a prediction.
-
-### Explore Dataset
-
-Filter records by day and food type, inspect the data, and download the filtered results as a CSV file.
-
-### Model Performance
-
-View the model's evaluation metrics and compare actual food-waste values with predicted values.
-
-## 📈 Future Improvements
-
-* Integrate a real-world food-waste dataset.
-* Compare Random Forest with other regression algorithms.
-* Improve feature engineering and model validation.
-* Add historical trends and forecasting.
-* Explore recommendations for reducing food waste.
-* Deploy the dashboard online.
-
-## ⚠️ Data Disclaimer
-
-The current dataset contains **synthetic sample data generated for demonstration and learning purposes**. It does not represent verified measurements from an actual restaurant, hotel, cafeteria, or food-service business.
-
-Predictions and evaluation metrics should therefore be interpreted as project demonstrations rather than validated real-world results.
-
-## 👩‍💻 Author
-
-**Anuvarna R**
-
-BCA Data Science Graduate | MCA Student in Data Science and Artificial Intelligence
-
-Interested in Python, Data Analytics, Machine Learning, and sustainable technology.
+If it does not, use the local address displayed in the terminal.
 
 ---
 
-⭐ If you find this project interesting, feel free to explore the repository and its implementation.
+## 🖥️ 10. Application Workflow
+
+```text
+                  Food Wastage Dataset
+                           |
+                           v
+                 Data Exploration
+                           |
+                           v
+                  Data Preprocessing
+                           |
+                           v
+                  Feature Engineering
+                           |
+                           v
+                 Train/Test Evaluation
+                           |
+                           v
+                 Random Forest Model
+                           |
+                           v
+                    Saved Model
+                           |
+                           v
+                 Streamlit Application
+                           |
+          ---------------------------------
+          |          |          |         |
+          v          v          v         v
+       Dashboard  Prediction  Dataset   Model
+                              Explorer Performance
+                           |
+                           v
+                  Smart Recommendations
+```
+
+The application combines descriptive analytics and predictive modeling to support food waste analysis.
+
+---
+
+## 💼 11. Business Applications
+
+WasteWise demonstrates analytical techniques that may be relevant to:
+
+### Restaurants
+
+Understanding food wastage patterns and improving preparation planning.
+
+### Hotels
+
+Analyzing food consumption and waste across different operational scenarios.
+
+### Catering Businesses
+
+Supporting quantity planning based on guest counts and event characteristics.
+
+### Event Management
+
+Comparing food wastage patterns across event categories.
+
+### Sustainability Analytics
+
+Using data to identify opportunities for reducing resource waste.
+
+These are potential applications of the approach rather than claims of validated commercial deployment.
+
+---
+
+## 🔮 12. Future Improvements
+
+Potential enhancements include:
+
+- Integrating verified restaurant and catering operational data.
+- Comparing Random Forest with alternative regression algorithms.
+- Performing additional feature engineering.
+- Implementing hyperparameter optimization.
+- Adding model explainability using SHAP.
+- Incorporating historical demand forecasting.
+- Developing more personalized recommendations.
+- Adding automated data quality checks.
+- Improving model monitoring and reproducibility.
+- Supporting operational reporting and exports.
+
+---
+
+## ⚠️ 13. Limitations and Responsible Use
+
+WasteWise is a portfolio project demonstrating machine learning and data analytics techniques.
+
+The model's predictions depend on the characteristics and quality of the training dataset.
+
+The application has not been established as a production-validated forecasting system for commercial food-service operations.
+
+Predictions should not be treated as guaranteed outcomes.
+
+Operational decisions should consider additional factors, including actual demand, food safety, inventory constraints, and business requirements.
+
+---
+
+## 👩‍💻 14. Author
+
+### Anuvarna R.
+
+**BCA Data Science Graduate**
+
+Python Developer Intern | Data Analytics | Machine Learning
+
+Interested in developing practical data-driven solutions using Python, machine learning, and analytics.
+
+### Project Links
+
+**Live Application:**  
+https://food-waste-prediction-system.streamlit.app/
+
+**GitHub Repository:**  
+https://github.com/anuvarna-r/food-waste-prediction-system
+
+---
+
+### ⭐ WasteWise
+
+**Using machine learning and data analytics to explore smarter food management and a more sustainable future.**
