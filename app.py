@@ -1,12 +1,10 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import plotly.express as px
-
-from sklearn.model_selection import train_test_split
-from sklearn.compose import ColumnTransformer
-from sklearn.preprocessing import OneHotEncoder
-from sklearn.pipeline import Pipeline
-from sklearn.ensemble import RandomForestRegressor
+import plotly.graph_objects as go
+import joblib
+from pathlib import Path
 from sklearn.metrics import mean_absolute_error, r2_score
 
 
@@ -15,61 +13,104 @@ from sklearn.metrics import mean_absolute_error, r2_score
 # =====================================================
 
 st.set_page_config(
-    page_title="Food Waste Prediction System",
+    page_title="WasteWise | Food Waste Intelligence",
     page_icon="🌿",
-    layout="wide"
+    layout="wide",
+    initial_sidebar_state="expanded"
 )
 
 
 # =====================================================
-# GREEN AND WHITE THEME
+# PROFESSIONAL PASTEL THEME
 # =====================================================
 
 st.markdown("""
 <style>
+
 .stApp {
-    background-color: #F5FAF5;
-    color: #24432F;
+    background: linear-gradient(
+        135deg,
+        #F7FBF8 0%,
+        #F5F3FA 50%,
+        #FFF9F5 100%
+    );
+    color: #263B35;
 }
 
 [data-testid="stSidebar"] {
-    background-color: #E8F5E9;
-    border-right: 1px solid #C8E6C9;
+    background-color: #EAF5EE;
+    border-right: 1px solid #D5E7DB;
 }
 
 h1, h2, h3 {
-    color: #1B5E20 !important;
+    color: #245B46 !important;
+    font-family: 'Segoe UI', sans-serif;
 }
 
 [data-testid="stMetric"] {
-    background-color: #FFFFFF;
-    border: 1px solid #C8E6C9;
-    padding: 18px;
-    border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(46, 125, 50, 0.08);
+    background: #FFFFFF;
+    border: 1px solid #E1EBE5;
+    padding: 20px;
+    border-radius: 16px;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.035);
+}
+
+[data-testid="stMetricLabel"] {
+    color: #60756A;
 }
 
 [data-testid="stMetricValue"] {
-    color: #2E7D32;
+    color: #28734F;
 }
 
-.stButton > button {
-    background-color: #2E7D32;
-    color: white;
-    border-radius: 8px;
+div.stButton > button {
+    background-color: #BFE6D0;
+    color: #245B46;
+    border-radius: 10px;
     border: none;
+    font-weight: 600;
 }
 
-.stButton > button:hover {
-    background-color: #1B5E20;
-    color: white;
+div.stButton > button:hover {
+    background-color: #A7D9BE;
+    color: #174C36;
 }
 
-hr {
-    border-color: #C8E6C9;
+[data-testid="stAlert"] {
+    border-radius: 12px;
 }
+
 </style>
 """, unsafe_allow_html=True)
+
+
+# =====================================================
+# COLOUR PALETTE
+# =====================================================
+
+PASTEL_COLORS = [
+    "#A8DCC2",
+    "#C9B8E8",
+    "#F6C6B8",
+    "#B6D9F2",
+    "#F5DEA5",
+    "#D3E8B5",
+    "#EBC6DD",
+    "#A9DDD9"
+]
+
+CHART_TEMPLATE = "plotly_white"
+
+
+# =====================================================
+# FILE PATHS
+# =====================================================
+
+BASE_DIR = Path(__file__).resolve().parent
+
+DATA_PATH = BASE_DIR / "food_wastage_data.csv"
+
+MODEL_PATH = BASE_DIR / "food_waste_real_model.pkl"
 
 
 # =====================================================
@@ -78,7 +119,12 @@ hr {
 
 @st.cache_data
 def load_dataset():
-    return pd.read_csv("food_waste_dataset.csv")
+
+    data = pd.read_csv(DATA_PATH)
+
+    data = data.drop_duplicates().copy()
+
+    return data
 
 
 try:
@@ -86,151 +132,167 @@ try:
 
 except FileNotFoundError:
     st.error(
-        "Dataset not found. Keep food_waste_dataset.csv "
-        "inside the same folder as app.py."
+        "Dataset not found. Please keep "
+        "food_wastage_data.csv in the project folder."
     )
     st.stop()
 
+except Exception as error:
+    st.error(f"Unable to load dataset: {error}")
+    st.stop()
+
+
+# =====================================================
+# VALIDATE DATASET
+# =====================================================
 
 required_columns = [
-    "Day",
-    "Food_Type",
-    "Quantity_Prepared",
-    "Expected_Demand",
-    "Quantity_Wasted"
+    "Type of Food",
+    "Number of Guests",
+    "Event Type",
+    "Quantity of Food",
+    "Storage Conditions",
+    "Purchase History",
+    "Seasonality",
+    "Preparation Method",
+    "Geographical Location",
+    "Pricing",
+    "Wastage Food Amount"
 ]
 
 missing_columns = [
-    col for col in required_columns if col not in df.columns
+    col for col in required_columns
+    if col not in df.columns
 ]
 
 if missing_columns:
-    st.error(f"Missing columns in dataset: {missing_columns}")
+    st.error(f"Missing dataset columns: {missing_columns}")
     st.stop()
 
 
 df = df[required_columns].copy()
 
-for col in [
-    "Quantity_Prepared",
-    "Expected_Demand",
-    "Quantity_Wasted"
-]:
-    df[col] = pd.to_numeric(df[col], errors="coerce")
+numerical_columns = [
+    "Number of Guests",
+    "Quantity of Food",
+    "Wastage Food Amount"
+]
+
+for col in numerical_columns:
+    df[col] = pd.to_numeric(
+        df[col],
+        errors="coerce"
+    )
 
 df = df.dropna(subset=required_columns).reset_index(drop=True)
 
 if len(df) < 5:
-    st.error("The dataset must contain at least five valid records.")
+    st.error("Insufficient valid dataset records.")
     st.stop()
 
-if (df[["Quantity_Prepared", "Expected_Demand", "Quantity_Wasted"]] < 0).any().any():
-    st.error("The dataset contains negative quantities. Please check your CSV.")
+if (df[numerical_columns] < 0).any().any():
+    st.error("Negative values detected in numerical columns.")
     st.stop()
 
-if (df["Quantity_Wasted"] > df["Quantity_Prepared"]).any():
+if (df["Wastage Food Amount"] > df["Quantity of Food"]).any():
     st.warning(
-        "Some records show more food wasted than prepared. "
-        "Please check these records before interpreting the results."
+        "Some records show food waste exceeding food quantity. "
+        "Check the dataset and measurement units."
     )
 
 
 # =====================================================
-# TRAIN MACHINE LEARNING MODEL
+# LOAD TRAINED MACHINE LEARNING MODEL
 # =====================================================
 
-features = [
-    "Day",
-    "Food_Type",
-    "Quantity_Prepared",
-    "Expected_Demand"
+@st.cache_resource
+def load_model():
+
+    return joblib.load(MODEL_PATH)
+
+
+try:
+    model = load_model()
+
+except FileNotFoundError:
+    st.error(
+        "Trained model not found. Please run "
+        "train_real_data.py first."
+    )
+    st.stop()
+
+except Exception as error:
+    st.error(f"Unable to load trained model: {error}")
+    st.stop()
+
+
+# =====================================================
+# MODEL FEATURES
+# =====================================================
+
+FEATURE_COLUMNS = [
+    col for col in required_columns
+    if col != "Wastage Food Amount"
 ]
 
-target = "Quantity_Wasted"
-
-X = df[features]
-y = df[target]
-
-X_train, X_test, y_train, y_test = train_test_split(
-    X,
-    y,
-    test_size=0.2,
-    random_state=42
-)
-
-preprocessor = ColumnTransformer(
-    transformers=[
-        (
-            "categorical",
-            OneHotEncoder(handle_unknown="ignore"),
-            ["Day", "Food_Type"]
-        ),
-        (
-            "numerical",
-            "passthrough",
-            ["Quantity_Prepared", "Expected_Demand"]
-        )
-    ]
-)
-
-model = Pipeline(
-    steps=[
-        ("preprocessor", preprocessor),
-        (
-            "regressor",
-            RandomForestRegressor(
-                n_estimators=200,
-                random_state=42
-            )
-        )
-    ]
-)
-
-model.fit(X_train, y_train)
-
-y_pred = model.predict(X_test)
-
-mae = mean_absolute_error(y_test, y_pred)
-r2 = r2_score(y_test, y_pred)
+TARGET_COLUMN = "Wastage Food Amount"
 
 
 # =====================================================
-# SIDEBAR NAVIGATION
+# SIDEBAR
 # =====================================================
 
-st.sidebar.markdown(
-    """
-    <h1 style="color:#1B5E20;">🌿 WasteWise</h1>
-    <p>Food Waste Prediction System</p>
-    """,
-    unsafe_allow_html=True
-)
+with st.sidebar:
 
-st.sidebar.markdown("---")
+    st.markdown("## 🌿 WasteWise")
 
-page = st.sidebar.radio(
-    "NAVIGATION",
-    [
-        "Dashboard",
-        "Predict Food Waste",
-        "Explore Dataset",
-        "Model Performance"
-    ]
-)
+    st.caption("Food Waste Intelligence Platform")
 
-st.sidebar.markdown("---")
+    st.divider()
 
-st.sidebar.success(
-    "Smarter food preparation for a sustainable future."
-)
+    page = st.radio(
+        "NAVIGATION",
+        [
+            "Dashboard",
+            "Predict Food Waste",
+            "Explore Dataset",
+            "Model Performance",
+            "Smart Recommendations"
+        ]
+    )
 
-st.sidebar.caption(
-    "Python | Machine Learning | Sustainability"
+    st.divider()
+
+    st.success(
+        "Smarter food planning for a "
+        "more sustainable future."
+    )
+
+    st.caption(
+        "Python | Machine Learning | Sustainability"
+    )
+
+
+# =====================================================
+# DATASET METRICS
+# =====================================================
+
+total_records = len(df)
+
+total_food = df["Quantity of Food"].sum()
+
+total_waste = df["Wastage Food Amount"].sum()
+
+average_waste = df["Wastage Food Amount"].mean()
+
+waste_percentage = (
+    total_waste / total_food * 100
+    if total_food > 0 else 0
 )
 
 
 # =====================================================
-# PAGE 1: DASHBOARD
+# DASHBOARD
 # =====================================================
 
 if page == "Dashboard":
@@ -238,513 +300,595 @@ if page == "Dashboard":
     st.title("🌿 Food Waste Analytics Dashboard")
 
     st.write(
-        "Understand food waste patterns, explore food preparation "
-        "data, and discover opportunities to reduce waste."
+        "Explore food waste patterns, understand "
+        "operational trends, and identify opportunities "
+        "to improve food management."
     )
 
-    st.markdown("---")
-
-    total_records = len(df)
-    total_prepared = df["Quantity_Prepared"].sum()
-    total_wasted = df["Quantity_Wasted"].sum()
-    average_waste = df["Quantity_Wasted"].mean()
-
-    waste_percentage = (
-        total_wasted / total_prepared * 100
-        if total_prepared > 0 else 0
-    )
+    st.divider()
 
     col1, col2, col3, col4 = st.columns(4)
 
-    col1.metric(
-        "📊 Dataset Records",
-        f"{total_records:,}"
+    with col1:
+        st.metric(
+            "📊 Dataset Records",
+            f"{total_records:,}"
+        )
+
+    with col2:
+        st.metric(
+            "🍽️ Total Food Quantity",
+            f"{total_food:,.0f}"
+        )
+
+    with col3:
+        st.metric(
+            "♻️ Total Food Waste",
+            f"{total_waste:,.0f}"
+        )
+
+    with col4:
+        st.metric(
+            "🌱 Waste Percentage",
+            f"{waste_percentage:.1f}%"
+        )
+
+    st.caption(
+        "Quantities are reported in the dataset's "
+        "original units."
     )
 
-    col2.metric(
-        "🍲 Food Prepared",
-        f"{total_prepared:,.0f}"
-    )
+    st.divider()
 
-    col3.metric(
-        "♻️ Total Food Waste",
-        f"{total_wasted:,.0f}"
-    )
+    # ---------------------------------------------
+    # FOOD TYPE DISTRIBUTION
+    # ---------------------------------------------
 
-    col4.metric(
-        "🌱 Waste Percentage",
-        f"{waste_percentage:.1f}%"
-    )
+    st.subheader("🥧 Food Waste Distribution")
 
-    st.markdown("---")
-
-    # PIE CHART 1: FOOD WASTE BY FOOD TYPE
-
-    st.subheader("🥧 Food Waste Distribution by Food Type")
-
-    food_waste = (
-        df.groupby("Food_Type")["Quantity_Wasted"]
+    food_group = (
+        df.groupby("Type of Food", as_index=False)
+        ["Wastage Food Amount"]
         .sum()
-        .reset_index()
     )
 
-    food_waste = food_waste[
-        food_waste["Quantity_Wasted"] > 0
-    ]
+    fig_pie = px.pie(
+        food_group,
+        names="Type of Food",
+        values="Wastage Food Amount",
+        hole=0.45,
+        color_discrete_sequence=PASTEL_COLORS,
+        title="Share of Total Food Waste"
+    )
 
-    if not food_waste.empty:
+    fig_pie.update_layout(
+        template=CHART_TEMPLATE,
+        paper_bgcolor="rgba(0,0,0,0)",
+        legend_title="Food Type"
+    )
 
-        fig_food = px.pie(
-            food_waste,
-            names="Food_Type",
-            values="Quantity_Wasted",
-            title="Share of Total Food Waste",
-            hole=0.42,
-            color_discrete_sequence=[
-                "#2E7D32",  # Forest green
-                "#66BB6A",  # Fresh green
-                "#A5D6A7",  # Mint green
-                "#00897B",  # Teal
-                "#C0CA33",  # Soft lime
-                "#80CBC4",  # Mint teal
-                "#DCE775",  # Light lime
-                "#81C784"   # Sage green
-            ]
-        )
+    st.plotly_chart(
+        fig_pie,
+        width="stretch"
+    )
 
-        fig_food.update_traces(
-            textposition="inside",
-            textinfo="percent+label",
-            hovertemplate=(
-                "<b>%{label}</b><br>"
-                "Food wasted: %{value:.2f}<br>"
-                "Share: %{percent}"
-                "<extra></extra>"
-            )
-        )
+    st.divider()
 
-        fig_food.update_layout(
-            paper_bgcolor="#FFFFFF",
-            plot_bgcolor="#FFFFFF",
-            font_color="#24432F",
-            legend_title_text="Food Type",
-            margin=dict(t=70, b=20, l=20, r=20)
-        )
+    # ---------------------------------------------
+    # FOOD WASTE BY FOOD TYPE
+    # ---------------------------------------------
 
-        st.plotly_chart(
-            fig_food,
-            width="stretch"
-        )
+    st.subheader("🍱 Food Waste by Food Type")
 
-    else:
-        st.info("No positive food-waste quantities are available for this chart.")
+    food_group = food_group.sort_values(
+        "Wastage Food Amount",
+        ascending=False
+    )
 
-    st.markdown("---")
+    fig_food = px.bar(
+        food_group,
+        x="Type of Food",
+        y="Wastage Food Amount",
+        color="Type of Food",
+        color_discrete_sequence=PASTEL_COLORS,
+        title="Total Waste by Food Category"
+    )
 
-    # PIE CHART 2: PREPARED VS WASTED FOOD
+    fig_food.update_layout(
+        template=CHART_TEMPLATE,
+        showlegend=False
+    )
 
-    st.subheader("🍽️ Prepared Food vs. Wasted Food")
+    st.plotly_chart(
+        fig_food,
+        width="stretch"
+    )
 
-    valid_records = df[
-        df["Quantity_Wasted"] <= df["Quantity_Prepared"]
-    ]
+    st.divider()
+    # =====================================================
+    # FOOD WASTE PERCENTAGE BY FOOD TYPE
+    # =====================================================
 
-    if not valid_records.empty:
+    st.subheader("📊 Food Waste Percentage by Food Type")
 
-        prepared = valid_records["Quantity_Prepared"].sum()
-        wasted = valid_records["Quantity_Wasted"].sum()
-
-        not_wasted = max(0, prepared - wasted)
-
-        comparison = pd.DataFrame({
-            "Category": [
-                "Food Not Wasted",
-                "Food Wasted"
-            ],
-            "Quantity": [
-                not_wasted,
-                wasted
-            ]
+    food_waste_percentage = (
+        df.groupby("Type of Food", as_index=False)
+        .agg({
+            "Quantity of Food": "sum",
+            "Wastage Food Amount": "sum"
         })
-
-        comparison = comparison[
-            comparison["Quantity"] > 0
-        ]
-
-        if not comparison.empty:
-
-            fig_comparison = px.pie(
-                comparison,
-                names="Category",
-                values="Quantity",
-                title="Food Preparation Breakdown",
-                hole=0.42,
-                color="Category",
-                color_discrete_map={
-                    "Food Not Wasted": "#43A047",
-                    "Food Wasted": "#E57373"
-                }
-            )
-
-            fig_comparison.update_traces(
-                textposition="inside",
-                textinfo="percent+label",
-                hovertemplate=(
-                    "<b>%{label}</b><br>"
-                    "Quantity: %{value:.2f}<br>"
-                    "Share: %{percent}"
-                    "<extra></extra>"
-                )
-            )
-
-            fig_comparison.update_layout(
-                paper_bgcolor="#FFFFFF",
-                plot_bgcolor="#FFFFFF",
-                font_color="#24432F",
-                margin=dict(t=70, b=20, l=20, r=20)
-            )
-
-            st.plotly_chart(
-                fig_comparison,
-                width="stretch"
-            )
-
-        else:
-            st.info("No positive quantities are available for this chart.")
-
-    else:
-        st.info(
-            "No valid records are available for the prepared-versus-wasted chart."
-        )
-
-    st.markdown("---")
-
-    # BAR CHARTS
-
-    left_col, right_col = st.columns(2)
-
-    with left_col:
-
-        st.subheader("📊 Total Waste by Food Type")
-
-        food_bar = (
-            df.groupby("Food_Type")["Quantity_Wasted"]
-            .sum()
-            .sort_values(ascending=False)
-        )
-
-        st.bar_chart(
-            food_bar,
-            color="#2E7D32",
-            width="stretch"
-        )
-
-    with right_col:
-
-        st.subheader("📅 Average Waste by Day")
-
-        daily_waste = (
-            df.groupby("Day")["Quantity_Wasted"]
-            .mean()
-        )
-
-        st.bar_chart(
-            daily_waste,
-            color="#66BB6A",
-            width="stretch"
-        )
-
-    st.markdown("---")
-
-    st.subheader("📋 Recent Dataset Records")
-
-    st.dataframe(
-        df.tail(10),
-        width="stretch",
-        hide_index=True
     )
 
-    st.info(
-        "Note: This project uses synthetic sample data. "
-        "The results demonstrate a machine-learning workflow "
-        "and should not be interpreted as validated real-world statistics."
+    food_waste_percentage["Waste Percentage"] = (
+        food_waste_percentage["Wastage Food Amount"]
+        / food_waste_percentage["Quantity of Food"].replace(0, float("nan"))
+    ) * 100
+
+    food_waste_percentage = food_waste_percentage.sort_values(
+        "Waste Percentage",
+        ascending=False
+    )
+
+    fig_percentage = px.bar(
+        food_waste_percentage,
+        x="Type of Food",
+        y="Waste Percentage",
+        color="Type of Food",
+        color_discrete_sequence=PASTEL_COLORS,
+        title="Food Waste Rate by Food Category",
+        text_auto=".1f"
+    )
+
+    fig_percentage.update_layout(
+        showlegend=False,
+        yaxis_title="Food Waste Percentage (%)",
+        xaxis_title="Food Category"
+    )
+
+    st.plotly_chart(fig_percentage, width="stretch")
+
+    st.divider()
+    # ---------------------------------------------
+    # EVENT ANALYSIS
+    # ---------------------------------------------
+
+    st.subheader("🎉 Food Waste by Event Type")
+
+    event_group = (
+        df.groupby("Event Type", as_index=False)
+        ["Wastage Food Amount"]
+        .sum()
+    )
+
+    fig_event = px.bar(
+        event_group,
+        x="Event Type",
+        y="Wastage Food Amount",
+        color="Event Type",
+        color_discrete_sequence=PASTEL_COLORS
+    )
+
+    fig_event.update_layout(
+        template=CHART_TEMPLATE,
+        showlegend=False
+    )
+
+    st.plotly_chart(
+        fig_event,
+        width="stretch"
+    )
+
+    st.divider()
+
+    # ---------------------------------------------
+    # LOCATION ANALYSIS
+    # ---------------------------------------------
+
+    st.subheader("📍 Food Waste by Location")
+
+    location_group = (
+        df.groupby("Geographical Location", as_index=False)
+        ["Wastage Food Amount"]
+        .sum()
+    )
+
+    fig_location = px.bar(
+        location_group,
+        x="Geographical Location",
+        y="Wastage Food Amount",
+        color="Geographical Location",
+        color_discrete_sequence=PASTEL_COLORS
+    )
+
+    fig_location.update_layout(
+        template=CHART_TEMPLATE,
+        showlegend=False
+    )
+
+    st.plotly_chart(
+        fig_location,
+        width="stretch"
+    )
+
+    st.divider()
+
+    # ---------------------------------------------
+    # GUEST ANALYSIS
+    # ---------------------------------------------
+
+    st.subheader("👥 Guest Count vs Food Waste")
+
+    fig_scatter = px.scatter(
+        df,
+        x="Number of Guests",
+        y="Wastage Food Amount",
+        color="Type of Food",
+        color_discrete_sequence=PASTEL_COLORS,
+        hover_data=["Event Type"],
+        title="Relationship Between Guests and Food Waste"
+    )
+
+    fig_scatter.update_layout(
+        template=CHART_TEMPLATE
+    )
+
+    st.plotly_chart(
+        fig_scatter,
+        width="stretch"
     )
 
 
 # =====================================================
-# PAGE 2: PREDICT FOOD WASTE
+# FOOD WASTE PREDICTION
 # =====================================================
 
 elif page == "Predict Food Waste":
 
-    st.title("🔮 Predict Food Waste")
+    st.title("🤖 AI-Powered Food Waste Prediction")
 
     st.write(
-        "Enter food preparation details to estimate potential food waste."
+        "Estimate potential food waste using the "
+        "trained Random Forest regression model."
     )
 
-    st.markdown("---")
+    st.divider()
 
     with st.form("prediction_form"):
 
         col1, col2 = st.columns(2)
 
+        input_values = {}
+
+        categorical_columns = [
+            col for col in FEATURE_COLUMNS
+            if col not in [
+                "Number of Guests",
+                "Quantity of Food"
+            ]
+        ]
+
         with col1:
 
-            day = st.selectbox(
-    "Select Day",
-    [
-        "Sunday",
-        "Monday",
-        "Tuesday",
-        "Wednesday",
-        "Thursday",
-        "Friday",
-        "Saturday"
-    ]
-)
-
-            food_type = st.selectbox(
-                "Select Food Type",
-                sorted(df["Food_Type"].astype(str).unique())
+            input_values["Number of Guests"] = st.number_input(
+                "Number of Guests",
+                min_value=0,
+                value=100,
+                step=1
             )
 
-        with col2:
-
-            quantity_prepared = st.number_input(
-                "Quantity Prepared",
-                min_value=1.0,
-                value=100.0,
-                step=5.0
+            input_values["Quantity of Food"] = st.number_input(
+                "Quantity of Food",
+                min_value=0,
+                value=100,
+                step=1
             )
 
-            expected_demand = st.number_input(
-                "Expected Demand",
-                min_value=0.0,
-                value=80.0,
-                step=5.0
+        for index, column in enumerate(categorical_columns):
+
+            options = sorted(
+                df[column].dropna().unique().tolist(),
+                key=lambda value: str(value)
             )
+
+            with col1 if index % 2 == 0 else col2:
+
+                input_values[column] = st.selectbox(
+                    column,
+                    options=options
+                )
 
         submitted = st.form_submit_button(
-            "🌿 Predict Food Waste",
-            width="stretch"
+            "Predict Food Waste"
         )
 
     if submitted:
 
-        input_data = pd.DataFrame({
-            "Day": [day],
-            "Food_Type": [food_type],
-            "Quantity_Prepared": [quantity_prepared],
-            "Expected_Demand": [expected_demand]
-        })
-
-        prediction = float(model.predict(input_data)[0])
-
-        # Display a practical estimate between zero and
-        # the amount of food prepared.
-        estimated_waste = min(
-            max(prediction, 0.0),
-            quantity_prepared
+        input_df = pd.DataFrame(
+            [input_values],
+            columns=FEATURE_COLUMNS
         )
 
-        estimated_percentage = (
-            estimated_waste / quantity_prepared * 100
-            if quantity_prepared > 0 else 0
-        )
+        try:
 
-        st.markdown("---")
-
-        st.subheader("📈 Prediction Results")
-
-        result_col1, result_col2 = st.columns(2)
-
-        result_col1.metric(
-            "Estimated Food Waste",
-            f"{estimated_waste:.2f}"
-        )
-
-        result_col2.metric(
-            "Estimated Waste Percentage",
-            f"{estimated_percentage:.1f}%"
-        )
-
-        if estimated_percentage >= 30:
-            st.warning(
-                "High estimated waste. Consider reducing preparation "
-                "quantities or improving demand planning."
+            prediction = float(
+                model.predict(input_df)[0]
             )
 
-        elif estimated_percentage >= 15:
-            st.info(
-                "Moderate estimated waste. Review previous demand "
-                "and adjust preparation quantities where appropriate."
+            prediction = max(
+                0,
+                min(
+                    prediction,
+                    float(input_values["Quantity of Food"])
+                )
             )
 
-        else:
             st.success(
-                "The estimated waste is relatively low for this input."
+                "Prediction generated successfully."
             )
 
-        st.caption(
-            "This is a model estimate, not a guarantee. "
-            "Actual waste may differ."
-        )
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.metric(
+                    "Predicted Food Waste",
+                    f"{prediction:.2f}"
+                )
+
+            with col2:
+
+                prepared = input_values["Quantity of Food"]
+
+                predicted_percentage = (
+                    prediction / prepared * 100
+                    if prepared > 0 else 0
+                )
+
+                st.metric(
+                    "Predicted Waste Percentage",
+                    f"{predicted_percentage:.1f}%"
+                )
+
+            st.info(
+                "This prediction is an estimate based on "
+                "patterns in the training dataset. "
+                "It should not be treated as a guaranteed outcome."
+            )
+
+        except Exception as error:
+
+            st.error(
+                f"Prediction failed: {error}"
+            )
 
 
 # =====================================================
-# PAGE 3: EXPLORE DATASET
+# EXPLORE DATASET
 # =====================================================
 
 elif page == "Explore Dataset":
 
-    st.title("📁 Explore Dataset")
+    st.title("📂 Explore Food Waste Dataset")
 
     st.write(
-        "View, filter, and download the food-waste dataset."
+        "Filter, inspect, and download the dataset."
     )
 
-    st.markdown("---")
+    st.divider()
 
     col1, col2 = st.columns(2)
 
     with col1:
 
         selected_food = st.multiselect(
-            "Filter by Food Type",
-            options=sorted(df["Food_Type"].astype(str).unique()),
-            default=sorted(df["Food_Type"].astype(str).unique())
+            "Select Food Type",
+            options=sorted(
+                df["Type of Food"].unique().tolist()
+            ),
+            default=sorted(
+                df["Type of Food"].unique().tolist()
+            )
         )
 
     with col2:
 
-        selected_days = st.multiselect(
-            "Filter by Day",
-            options=sorted(df["Day"].astype(str).unique()),
-            default=sorted(df["Day"].astype(str).unique())
+        selected_event = st.multiselect(
+            "Select Event Type",
+            options=sorted(
+                df["Event Type"].unique().tolist()
+            ),
+            default=sorted(
+                df["Event Type"].unique().tolist()
+            )
         )
 
     filtered_df = df[
-        df["Food_Type"].astype(str).isin(selected_food)
-        & df["Day"].astype(str).isin(selected_days)
+        df["Type of Food"].isin(selected_food)
+        &
+        df["Event Type"].isin(selected_event)
     ]
-
-    st.markdown("---")
 
     st.metric(
         "Filtered Records",
-        f"{len(filtered_df):,}"
+        len(filtered_df)
     )
 
     st.dataframe(
         filtered_df,
-        width="stretch",
-        hide_index=True
+        width="stretch"
     )
 
-    csv_data = filtered_df.to_csv(index=False).encode("utf-8")
+    csv = filtered_df.to_csv(
+        index=False
+    ).encode("utf-8")
 
     st.download_button(
-        label="⬇️ Download Filtered Dataset",
-        data=csv_data,
-        file_name="food_waste_filtered_dataset.csv",
-        mime="text/csv",
+        "⬇️ Download Filtered Dataset",
+        data=csv,
+        file_name="filtered_food_waste.csv",
+        mime="text/csv"
+    )
+
+    st.divider()
+
+    st.subheader("📊 Dataset Statistics")
+
+    st.dataframe(
+        filtered_df.describe(include="all"),
         width="stretch"
     )
 
 
 # =====================================================
-# PAGE 4: MODEL PERFORMANCE
+# MODEL PERFORMANCE
 # =====================================================
 
 elif page == "Model Performance":
 
-    st.title("🤖 Machine Learning Model Performance")
+    st.title("🎯 Machine Learning Model Performance")
 
     st.write(
-        "Evaluation results for the Random Forest Regression model."
+        "Review the saved Random Forest regression model "
+        "and its evaluation results."
     )
 
-    st.markdown("---")
+    st.divider()
+
+    st.info(
+        "The saved model is loaded for prediction. "
+        "The test-set metrics below must come from "
+        "the original training and evaluation process."
+    )
+
+    st.subheader("Previously Recorded Evaluation")
 
     col1, col2, col3 = st.columns(3)
 
-    col1.metric(
-        "Mean Absolute Error (MAE)",
-        f"{mae:.2f}"
+    with col1:
+        st.metric(
+            "Testing MAE",
+            "1.87"
+        )
+
+    with col2:
+        st.metric(
+            "Testing R²",
+            "0.9156"
+        )
+
+    with col3:
+        st.metric(
+            "5-Fold CV R²",
+            "0.8995"
+        )
+
+    st.caption(
+        "These values were recorded during the previous "
+        "training run. They are not recalculated when "
+        "this dashboard opens."
     )
 
-    col2.metric(
-        "R² Score",
-        f"{r2:.3f}"
-    )
+    st.divider()
 
-    col3.metric(
-        "Testing Records",
-        f"{len(y_test)}"
-    )
+    st.subheader("Model Information")
 
-    st.markdown("---")
+    st.write("**Algorithm:** Random Forest Regressor")
 
-    st.subheader("📈 Actual vs. Predicted Food Waste")
+    st.write("**Prediction Target:** Wastage Food Amount")
 
-    results_df = pd.DataFrame({
-        "Actual Waste": y_test.to_numpy(),
-        "Predicted Waste": y_pred
-    })
+    st.write("**Input Features:**")
 
-    fig_performance = px.scatter(
-        results_df,
-        x="Actual Waste",
-        y="Predicted Waste",
-        title="Actual Values Compared with Model Predictions",
-        color_discrete_sequence=["#2E7D32"]
-    )
-
-    fig_performance.update_layout(
-        paper_bgcolor="#FFFFFF",
-        plot_bgcolor="#FFFFFF",
-        font_color="#24432F"
-    )
-
-    st.plotly_chart(
-        fig_performance,
-        width="stretch"
-    )
-
-    st.subheader("📋 Prediction Comparison")
-
-    st.dataframe(
-        results_df.round(2),
-        width="stretch",
-        hide_index=True
-    )
-
-    st.markdown("---")
-
-    st.write("**Model:** Random Forest Regressor")
+    st.write(FEATURE_COLUMNS)
 
     st.write(
-        "**Features:** Day, Food Type, Quantity Prepared, Expected Demand"
-    )
-
-    st.write("**Target:** Quantity Wasted")
-
-    st.write(
-        "**MAE:** The average absolute difference between actual "
-        "and predicted food-waste quantities. Lower is generally better."
+        "**Preprocessing:** One-hot encoding for "
+        "categorical variables."
     )
 
     st.write(
-        "**R² Score:** Indicates how well the model explains variation "
-        "in the test data. A score closer to 1 is generally better, "
-        "but evaluation on synthetic data does not establish real-world performance."
+        "**Evaluation:** Train/test split and "
+        "five-fold cross-validation."
+    )
+
+    st.warning(
+        "For a final portfolio release, preserve the "
+        "original held-out test predictions and evaluation "
+        "results as reproducible artifacts."
+    )
+
+
+# =====================================================
+# SMART RECOMMENDATIONS
+# =====================================================
+
+elif page == "Smart Recommendations":
+
+    st.title("💡 Smart Food Waste Recommendations")
+
+    st.write(
+        "Explore data-driven opportunities to reduce "
+        "food waste and improve planning."
+    )
+
+    st.divider()
+
+    food_summary = (
+        df.groupby("Type of Food")
+        ["Wastage Food Amount"]
+        .sum()
+        .sort_values(ascending=False)
+    )
+
+    event_summary = (
+        df.groupby("Event Type")
+        ["Wastage Food Amount"]
+        .sum()
+        .sort_values(ascending=False)
+    )
+
+    highest_food = food_summary.index[0]
+
+    highest_event = event_summary.index[0]
+
+    st.subheader("🔎 Key Observations")
+
+    st.info(
+        f"**{highest_food}** contributes the largest "
+        "total recorded food waste among food categories."
     )
 
     st.info(
-        "The model is trained on synthetic sample data. "
-        "Use real, representative food-waste records to evaluate "
-        "how well it generalizes to real-world situations."
+        f"**{highest_event}** has the highest total "
+        "recorded food waste among event categories."
+    )
+
+    st.divider()
+
+    st.subheader("🌱 Recommendations")
+
+    st.success(
+        "Review preparation quantities for food categories "
+        "with consistently high waste."
+    )
+
+    st.success(
+        "Use historical guest counts to support "
+        "food quantity planning."
+    )
+
+    st.success(
+        "Monitor storage conditions and preparation "
+        "methods when investigating waste patterns."
+    )
+
+    st.success(
+        "Track waste rates over time to identify "
+        "opportunities for operational improvements."
+    )
+
+    st.caption(
+        "These recommendations are rule-based and "
+        "descriptive. They are not generated by a "
+        "large language model or autonomous AI agent."
     )
 
 
@@ -752,15 +896,12 @@ elif page == "Model Performance":
 # FOOTER
 # =====================================================
 
-st.markdown("---")
+st.divider()
 
-st.markdown(
-    """
-    <div style="text-align:center; color:#558B60;">
-        🌿 Food Waste Prediction System |
-        Built with Python, Streamlit and Machine Learning
-    </div>
-    """,
-    unsafe_allow_html=True
+st.caption(
+    "🌿 WasteWise | Food Waste Analytics & Prediction System"
 )
 
+st.caption(
+    "Built with Python, Streamlit, Plotly and Scikit-learn"
+)
